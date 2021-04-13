@@ -26,7 +26,7 @@
 	},
 	"license": "Apache-2.0",
 	"dependencies": {
-		"discord.js": "github:vaporox/discord.js#f2217d3"
+		"discord.js": "github:vaporox/discord.js#2c08679"
 	},
 	"engines": {
 		"node": ">=14.0.0"
