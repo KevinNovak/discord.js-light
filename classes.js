@@ -222,9 +222,6 @@ Discord.Structures.extend("Guild", G => {
 		get joinedAt() {
 			return this.joinedTimestamp ? super.joinedAt : void 0;
 		}
-		get owner() {
-			return this.members.cache.get(this.ownerID) || this.members.add({ user: { id: this.ownerID } }, false);
-		}
 		fetchBan(user) {
 			const id = this.client.users.resolveID(user);
 			if(!id) { throw new Error("FETCH_BAN_RESOLVE_ID"); }
@@ -315,11 +312,21 @@ Discord.Structures.extend("VoiceState", V => {
 Discord.Structures.extend("VoiceChannel", V => {
 	return class VoiceChannel extends V {
 		get joinable() {
-			if(Discord.Constants.browser) { return false; }
 			if((!this.guild.roles.cache.size && !this.client.options.cacheRoles) || (!this.permissionOverwrites.size && !this.client.options.cacheOverwrites)) { return true; }
 			if(!this.viewable) { return false; }
 			if(!this.permissionsFor(this.client.user).has(Discord.Permissions.FLAGS.CONNECT, false)) { return false; }
 			if(this.full && !this.permissionsFor(this.client.user).has(Discord.Permissions.FLAGS.MOVE_MEMBERS, false)) { return false; }
+			return true;
+		}
+	};
+});
+
+Discord.Structures.extend("StageChannel", V => {
+	return class StageChannel extends V {
+		get joinable() {
+			if((!this.guild.roles.cache.size && !this.client.options.cacheRoles) || (!this.permissionOverwrites.size && !this.client.options.cacheOverwrites)) { return true; }
+			if(!this.viewable) { return false; }
+			if(!this.permissionsFor(this.client.user).has(Discord.Permissions.FLAGS.CONNECT, false)) { return false; }
 			return true;
 		}
 	};
@@ -417,6 +424,11 @@ Discord.Channel.create = (client, data, _guild) => {
 				case Discord.Constants.ChannelTypes.STORE: {
 					const StoreChannel = Discord.Structures.get("StoreChannel");
 					channel = new StoreChannel(guild, data);
+					break;
+				}
+				case Discord.Constants.ChannelTypes.STAGE: {
+					const StageChannel = Discord.Structures.get("StageChannel");
+					channel = new StageChannel(guild, data);
 					break;
 				}
 			}
@@ -626,6 +638,7 @@ Discord.GuildChannelManager.prototype.fetch = async function(id, cache) {
 	for(const channel of channels) {
 		if(options.withOverwrites) { channel._withOverwrites = true; }
 		const c = this.client.channels.add(channel, this.guild, false);
+		if(!c) { continue; }
 		collection.set(c.id, c);
 	}
 	return collection;
@@ -695,7 +708,7 @@ Discord.GuildMemberManager.prototype.fetch = async function(id, cache) {
 		let { query } = options;
 		let user_ids = typeof options.user === "string" ? options.user : Array.isArray(options.user) ? options.user : void 0;
 		const limit = Number.isInteger(options.limit) ? options.limit : 0;
-		const nonce = Discord.Snowflake.generate();
+		const nonce = Discord.SnowflakeUtil.generate();
 		if(nonce.length > 32) {
 			j(new RangeError("MEMBER_FETCH_NONCE_LENGTH"));
 			return;
